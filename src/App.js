@@ -1,47 +1,31 @@
 import 'regenerator-runtime/runtime'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback } from 'react'
 import PropTypes from 'prop-types'
 import Big from 'big.js'
 import { v4 as uuid } from 'uuid'
+import useSmartContract from './useSmartContract'
 
 const SUGGESTED_DONATION = '1'
-const BOATLOAD_OF_GAS = Big(1).times(10 ** 16).toFixed()
 
 const App = ({ contract, currentUser, nearConfig, wallet }) => {
-  const [messages, setMessages] = useState([])
-
-  useEffect(() => {
-    // TODO: don't just fetch once; subscribe!
-    contract.getMessages().then(setMessages)
-  }, [])
+  const { messages, addMessage } = useSmartContract(contract)
 
   const onSubmit = useCallback(e => {
     e.preventDefault()
 
-    const { fieldset, message, donation } = e.target.elements
+    const { message, donation } = e.target.elements
 
-    fieldset.disabled = true
-
-    // TODO: optimistically update page with new message,
-    // update blockchain data in background
-    contract.addMessage(
-      {
-        id: uuid(),
-        text: message.value
-      },
-      BOATLOAD_OF_GAS,
-      Big(donation.value || '0').times(10 ** 24).toFixed()
-    ).then(() => {
-      contract.getMessages().then(messages => {
-        setMessages(messages)
-
-        message.value = ''
-        donation.value = SUGGESTED_DONATION
-        fieldset.disabled = false
-        message.focus()
-      })
+    addMessage({
+      id: uuid(),
+      text: message.value,
+      sender: currentUser.accountId,
+      donation: donation.value || 0
     })
-  }, [contract])
+
+    message.value = ''
+    donation.value = SUGGESTED_DONATION
+    message.focus()
+  }, [])
 
   const signIn = useCallback(() => {
     wallet.requestSignIn(
@@ -70,37 +54,35 @@ const App = ({ contract, currentUser, nearConfig, wallet }) => {
       </header>
       {currentUser && (
         <form onSubmit={onSubmit}>
-          <fieldset id="fieldset">
-            <p>Sign the guest book, { currentUser.accountId }!</p>
-            <p className="highlight">
-              <label htmlFor="message">Message:</label>
-              <input
-                autoComplete="off"
-                autoFocus
-                id="message"
-                required
-              />
-            </p>
-            <p>
-              <label htmlFor="donation">Donation (optional):</label>
-              <input
-                autoComplete="off"
-                defaultValue={SUGGESTED_DONATION}
-                id="donation"
-                max={Big(currentUser.balance).div(10 ** 24)}
-                min="0"
-                step="0.01"
-                type="number"
-              />
-              <span title="NEAR Tokens">Ⓝ</span>
-            </p>
-            <button type="submit">
-              Sign
-            </button>
-          </fieldset>
+          <p>Sign the guest book, { currentUser.accountId }!</p>
+          <p className="highlight">
+            <label htmlFor="message">Message:</label>
+            <input
+              autoComplete="off"
+              autoFocus
+              id="message"
+              required
+            />
+          </p>
+          <p>
+            <label htmlFor="donation">Donation (optional):</label>
+            <input
+              autoComplete="off"
+              defaultValue={SUGGESTED_DONATION}
+              id="donation"
+              max={Big(currentUser.balance).div(10 ** 24)}
+              min="0"
+              step="0.01"
+              type="number"
+            />
+            <span title="NEAR Tokens">Ⓝ</span>
+          </p>
+          <button type="submit">
+            Sign
+          </button>
         </form>
       )}
-      {!!messages.length && (
+      {messages && !!messages.length && (
         <>
           <h2>Messages</h2>
           {messages.map((message, i) =>
@@ -117,10 +99,7 @@ const App = ({ contract, currentUser, nearConfig, wallet }) => {
 }
 
 App.propTypes = {
-  contract: PropTypes.shape({
-    addMessage: PropTypes.func.isRequired,
-    getMessages: PropTypes.func.isRequired
-  }).isRequired,
+  contract: PropTypes.object.isRequired,
   currentUser: PropTypes.shape({
     accountId: PropTypes.string.isRequired,
     balance: PropTypes.string.isRequired
