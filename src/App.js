@@ -3,24 +3,60 @@ import React, { useCallback } from 'react'
 import PropTypes from 'prop-types'
 import Big from 'big.js'
 import { v4 as uuid } from 'uuid'
-import useSmartContract from './useSmartContract'
+import useCachedUpdater from './useCachedUpdater'
+import useSubscribedGetter from './useSubscribedGetter'
 
 const SUGGESTED_DONATION = '1'
+const BOATLOAD_OF_GAS = Big(1).times(10 ** 16).toFixed()
 
 const App = ({ contract, currentUser, nearConfig, wallet }) => {
-  const { messages, addMessage } = useSmartContract(contract)
+  const [
+    addMessage,
+    syncingMessages,
+    updateSyncingMessages
+  ] = useCachedUpdater(
+    contract.addMessage,
+    {
+      initialCacheValue: [],
+      onFunctionCall: (cache, message) => {
+        const newCache = [...cache, message]
+        return newCache
+      },
+      onError: (cache, error, message) => {
+        const messages = [...cache]
+        const index = messages.findIndex(m => m.id === message.id)
+        messages[index].error = error.message
+        updateSyncingMessages(messages)
+      }
+    }
+  )
+
+  const persistedMessages = useSubscribedGetter(contract.getMessages, {
+    initialValue: [],
+    onUpdate: persistedMessages => {
+      const persistedIDs = persistedMessages.map(m => m.id)
+      const newSyncingMessages = syncingMessages.filter(m =>
+        !persistedIDs.includes(m.id)
+      )
+      updateSyncingMessages(newSyncingMessages)
+    }
+  })
 
   const onSubmit = useCallback(e => {
     e.preventDefault()
 
     const { message, donation } = e.target.elements
 
-    addMessage({
-      id: uuid(),
-      text: message.value,
-      sender: currentUser.accountId,
-      donation: donation.value || 0
-    })
+    addMessage(
+      {
+        id: uuid(),
+        text: message.value,
+        sender: currentUser.accountId,
+        donation: donation.value || 0
+      },
+      BOATLOAD_OF_GAS,
+      Big(donation.value || '0').times(10 ** 24).toFixed()
+    )
 
     message.value = ''
     donation.value = SUGGESTED_DONATION
@@ -82,24 +118,53 @@ const App = ({ contract, currentUser, nearConfig, wallet }) => {
           </button>
         </form>
       )}
-      {messages && !!messages.length && (
-        <>
-          <h2>Messages</h2>
-          {messages.map((message, i) =>
-            // TODO: format as cards, add timestamp
-            <p key={i} className={message.premium ? 'is-premium' : ''}>
-              <strong>{message.sender}</strong>:<br/>
-              {message.text}
-            </p>
-          )}
-        </>
+      {(!!persistedMessages.length || !!syncingMessages.length) && (
+        <h2>Messages</h2>
       )}
+      {persistedMessages.map((message, i) => (
+        // TODO: format as cards, add timestamp
+        <p key={i} className={message.premium ? 'is-premium' : ''}>
+          <strong>{message.sender}</strong>:<br/>
+          {message.text}
+        </p>
+      ))}
+      {syncingMessages.map((message, i) => (
+        <p key={i} style={{ color: 'gray' }}>
+          <strong>{message.sender}</strong>:<br/>
+          {message.text}
+          {message.error && (
+            <>
+              <br />
+              <span style={{ color: 'var(--red)' }}>
+                Syncing failed! {message.error}
+              </span>
+              <br />
+              <button onClick={() => {
+                const messages = [...syncingMessages]
+                const index = messages.findIndex(m => m.id === message.id)
+                delete messages[index].error
+                updateSyncingMessages(messages)
+                contract.addMessage(
+                  message,
+                  BOATLOAD_OF_GAS,
+                  Big(message.donation).times(10 ** 24).toFixed()
+                )
+              }}>
+                Retry
+              </button>
+            </>
+          )}
+        </p>
+      ))}
     </main>
   )
 }
 
 App.propTypes = {
-  contract: PropTypes.object.isRequired,
+  contract: PropTypes.shape({
+    addMessage: PropTypes.func.isRequired,
+    getMessages: PropTypes.func.isRequired
+  }).isRequired,
   currentUser: PropTypes.shape({
     accountId: PropTypes.string.isRequired,
     balance: PropTypes.string.isRequired
