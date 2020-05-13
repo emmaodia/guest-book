@@ -10,9 +10,9 @@ const MESSAGE_LIMIT = 10;
  * NOTE: This is a change method. Which means it will modify the state.\
  * But right now we don't distinguish them with annotations yet.
  */
-export function addMessage(text: string): void {
+export function addMessage(id: string, text: string): void {
   // Creating a new message and populating fields with our data
-  const message = new PostedMessage(text);
+  const message = new PostedMessage(id, text);
   // Adding the message to end of the the persistent collection
   messages.push(message);
 }
@@ -20,7 +20,7 @@ export function addMessage(text: string): void {
 /**
  * Returns an array of last N messages.\
  * NOTE: This is a view method. Which means it should NOT modify the state.
- */ 
+ */
 export function getMessages(): PostedMessage[] {
   const numMessages = min(MESSAGE_LIMIT, messages.length);
   const startIndex = messages.length - numMessages;
