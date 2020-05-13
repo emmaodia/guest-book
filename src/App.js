@@ -2,6 +2,7 @@ import 'regenerator-runtime/runtime'
 import React, { useCallback, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import Big from 'big.js'
+import { v4 as uuid } from 'uuid'
 
 const SUGGESTED_DONATION = '1'
 const BOATLOAD_OF_GAS = Big(1).times(10 ** 16).toFixed()
@@ -23,9 +24,11 @@ const App = ({ contract, currentUser, nearConfig, wallet }) => {
 
     // TODO: optimistically update page with new message,
     // update blockchain data in background
-    // add uuid to each message, so we know which one is already known
     contract.addMessage(
-      { text: message.value },
+      {
+        id: uuid(),
+        text: message.value
+      },
       BOATLOAD_OF_GAS,
       Big(donation.value || '0').times(10 ** 24).toFixed()
     ).then(() => {
