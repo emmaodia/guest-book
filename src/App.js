@@ -8,7 +8,7 @@ const BOATLOAD_OF_GAS = Big(1).times(10 ** 16).toFixed()
 
 const App = ({ contract, currentUser, nearConfig, wallet }) => {
   const [messages, setMessages] = useState([])
-
+  
   useEffect(() => {
     // TODO: don't just fetch once; subscribe!
     contract.getMessages().then(setMessages)
@@ -51,15 +51,16 @@ const App = ({ contract, currentUser, nearConfig, wallet }) => {
     wallet.signOut()
     window.location = '/'
   }, [])
-
+  
   return (
+    
     <main>
       <header style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between'
       }}>
-        <h1>NEAR Guest Book</h1>
+        <h1>NEAR Crowdfund dApp</h1>
         {currentUser
           ? <button onClick={signOut}>Log out</button>
           : <button onClick={signIn}>Log in</button>
@@ -68,9 +69,9 @@ const App = ({ contract, currentUser, nearConfig, wallet }) => {
       {currentUser && (
         <form onSubmit={onSubmit}>
           <fieldset id="fieldset">
-            <p>Sign the guest book, { currentUser.accountId }!</p>
+            <p>Create a campaign, { currentUser.accountId }!</p>
             <p className="highlight">
-              <label htmlFor="message">Message:</label>
+              <label htmlFor="message">Title:</label>
               <input
                 autoComplete="off"
                 autoFocus
@@ -79,7 +80,7 @@ const App = ({ contract, currentUser, nearConfig, wallet }) => {
               />
             </p>
             <p>
-              <label htmlFor="donation">Donation (optional):</label>
+              <label htmlFor="donation">Goal Amount:</label>
               <input
                 autoComplete="off"
                 defaultValue={SUGGESTED_DONATION}
@@ -92,7 +93,7 @@ const App = ({ contract, currentUser, nearConfig, wallet }) => {
               <span title="NEAR Tokens">Ⓝ</span>
             </p>
             <button type="submit">
-              Sign
+              Submit
             </button>
           </fieldset>
         </form>
@@ -105,12 +106,18 @@ const App = ({ contract, currentUser, nearConfig, wallet }) => {
             <p key={i} className={message.premium ? 'is-premium' : ''}>
               <strong>{message.sender}</strong>:<br/>
               {message.text}
+              {Math.round(message.premium)}
+              {console.log(message.sender)}
+              {console.log(message.text)}
+              {console.log(Math.ceil(message.premium))}
             </p>
           )}
         </>
       )}
     </main>
+    
   )
+  
 }
 
 App.propTypes = {
