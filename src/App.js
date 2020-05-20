@@ -1,5 +1,7 @@
 import 'regenerator-runtime/runtime'
 import React, { useCallback, useEffect, useState } from 'react'
+import { Navbar, Nav, NavDropdown, Form, FormControl, Button, Jumbotron, Container, Row, Col, CardDeck, Card} from 'react-bootstrap';
+import image from './crowdfunf.jpg';
 import PropTypes from 'prop-types'
 import Big from 'big.js'
 
@@ -43,7 +45,14 @@ const App = ({ contract, currentUser, nearConfig, wallet }) => {
   const signIn = useCallback(() => {
     wallet.requestSignIn(
       nearConfig.contractName,
-      'NEAR Guest Book'
+      'NEAR CrowdFund dApp'
+    )
+  }, [])
+
+   const Donate = useCallback(() => {
+    wallet.requestSignIn(
+      nearConfig.contractName,
+      'NEAR CrowdFund dApp'
     )
   }, [])
 
@@ -53,71 +62,95 @@ const App = ({ contract, currentUser, nearConfig, wallet }) => {
   }, [])
   
   return (
-    
-    <main>
-      <header style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
+    <>
+    <Navbar bg="light" expand="lg">
+      <Navbar.Brand href="#home">NEAR Crowdfund dApp</Navbar.Brand>
+      <Navbar.Toggle aria-controls="basic-navbar-nav" />
+      <Navbar.Collapse className="justify-content-end">
+        <Nav>
+          <Nav.Link>
+            <Form inline>
+              <FormControl type="text" placeholder="Search" className="mr-sm-2" />
+              <Button variant="outline-success">Search</Button>
+            </Form>
+          </Nav.Link>
+          <Nav.Link>
+            {currentUser
+              ? <Button variant="outline-primary" onClick={signOut}>Log out</Button>
+              : <Button variant="outline-success" onClick={signIn}>Log in</Button>
+            }
+          </Nav.Link>
+        </Nav>
+      </Navbar.Collapse>
+    </Navbar>
+            
+    <Jumbotron fluid>
+      <Container>
         <h1>NEAR Crowdfund dApp</h1>
-        {currentUser
-          ? <button onClick={signOut}>Log out</button>
-          : <button onClick={signIn}>Log in</button>
-        }
-      </header>
-      {currentUser && (
-        <form onSubmit={onSubmit}>
-          <fieldset id="fieldset">
-            <p>Create a campaign, { currentUser.accountId }!</p>
-            <p className="highlight">
-              <label htmlFor="message">Title:</label>
-              <input
-                autoComplete="off"
-                autoFocus
-                id="message"
-                required
-              />
-            </p>
-            <p>
-              <label htmlFor="donation">Goal Amount:</label>
-              <input
-                autoComplete="off"
-                defaultValue={SUGGESTED_DONATION}
-                id="donation"
-                max={Big(currentUser.balance).div(10 ** 24)}
-                min="0"
-                step="0.01"
-                type="number"
-              />
-              <span title="NEAR Tokens">Ⓝ</span>
-            </p>
-            <button type="submit">
-              Submit
-            </button>
-          </fieldset>
-        </form>
-      )}
-      {!!messages.length && (
-        <>
-          <h2>Messages</h2>
-          {messages.map((message, i) =>
-            // TODO: format as cards, add timestamp
-            <p key={i} className={message.premium ? 'is-premium' : ''}>
-              <strong>{message.sender}</strong>:<br/>
-              {message.text}
-              {Math.round(message.premium)}
-              {console.log(message.sender)}
-              {console.log(message.text)}
-              {console.log(Math.ceil(message.premium))}
-            </p>
-          )}
-        </>
-      )}
-    </main>
-    
+        <p>
+          This dApp was built beginning with the Guest Book and Wallet Templates of the NEAR examples.
+          Users can create a Campaign. Donors can Donate to a Campaign. Create a Campaign or Donate to one now!
+        </p>
+        {currentUser && (
+          <Form onSubmit={onSubmit}>
+           <fieldset id="fieldset">
+            <h2>Create a campaign, { currentUser.accountId }!</h2>
+              <Form.Row>
+                <Form.Group as={Col}>
+                  <Form.Control type="text" id="message" placeholder="Enter Campaign Title" required/>
+                </Form.Group>
+
+                <Form.Group as={Col}>
+                  <Form.Control type="number"  
+                  id="donation" 
+                  placeholder="Amount" 
+                  defaultValue={SUGGESTED_DONATION}
+                  max={Big(currentUser.balance).div(10 ** 24)}
+                  min="0"
+                  step="0.01" 
+                  required/>
+                </Form.Group>
+              </Form.Row>
+              
+              <Button variant="primary" type="submit">
+                Submit
+              </Button>
+            </fieldset>
+          </Form>
+        )}
+      </Container>
+    </Jumbotron>
+    <Container>
+      <CardDeck>
+        {!!messages.length && (
+          <>
+            {messages.map((message, i) =>
+            
+              <Card>
+                <p key={i} className={message.premium ? 'is-premium' : ''}></p>
+                <Card.Img variant="top" src={image}/>
+                <Card.Body>
+                  <Card.Title>Goal: {Math.round(message.premium)}</Card.Title>
+                  <Card.Text>
+                    Description: {message.text}
+                  </Card.Text>
+                </Card.Body>
+                <Card.Body>
+                   <Button variant="success" type="submit" className="justify-content-end" onClick={Donate}>
+                    Donate
+                  </Button>
+                </Card.Body>
+                <Card.Footer>
+                  <small className="text-muted">Owner: {message.sender}</small>
+                </Card.Footer>
+              </Card>
+            )}
+          </>
+        )}
+      </CardDeck>
+    </Container>
+    </>
   )
-  
 }
 
 App.propTypes = {
